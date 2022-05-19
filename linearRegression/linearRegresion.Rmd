@@ -1,0 +1,144 @@
+---
+title: "Linear Regression Basics"
+author: "Manuel Berea"
+date: "May - 2022"
+output: 
+  html_document:
+    theme: spacelab
+    highlight: tango
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+    code_folding: hide
+    number_sections: true
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+***
+# ORIGEN DE LOS DATOS
+
+
+***
+# LOADING DATA
+
+```{r}
+library(data.table)
+datIn <- as.data.frame(fread("D:/Kaggle/mlBasics/R-MLBasics/linearRegression/j0001_train.csv"))
+datTe <- as.data.frame(fread("D:/Kaggle/mlBasics/R-MLBasics/linearRegression/j0001_X_test.csv"))
+dim(datIn)
+class(datIn)
+head(datIn)
+```
+
+***
+# EDA
+
+The library "DataExplorer" make an automatic report. This report will save in our workspace. 
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(DataExplorer)
+library(ggplot2)
+library(rmarkdown)
+library(dplyr)
+library(car)
+
+create_report(datIn, y = "target")
+str(datIn)
+```
+There are 2100 obs and 4 features. All are numeric, we should see correlation matrix and the data distribution.
+
+```{r}
+summary(datIn)
+```
+
+## Target
+
+It is similar than a normal distribution. 
+
+```{r}
+library(ggplot2)
+hTar <- ggplot(datIn, aes(x = datIn$target)) + 
+                geom_histogram(aes(y = ..density..),
+                               colour = 1, fill = "white") +
+                geom_density()
+
+hTar + labs(title = "Target histogram", y = "density", x = "Target")
+```
+
+# Linear Regresion: Model 1
+
+First, I will make a first model without transformations, this first model could help me to decide. The function summary with the model give me information about the features and the typical statistics, like p-value or $R^2$.
+
+We will use caret for split and train our model. We discard the feature 4, because the pearson correlation value is 0, it mean that on a linear model, this feature will be useless.
+
+```{r}
+library(car)
+
+scatter.smooth(x=datIn$feature1, y=datIn$target, main="Targ ~ Feature1") 
+scatter.smooth(x=datIn$feature2, y=datIn$target, main="Targ ~ Feature2") 
+scatter.smooth(x=datIn$feature3, y=datIn$target, main="Targ ~ Feature3") 
+scatter.smooth(x=datIn$feature4, y=datIn$target, main="Targ ~ Feature4") 
+```
+
+```{r}
+library(caret)
+
+seed <- 1995
+
+set.seed(seed)
+inTraining <- createDataPartition(datIn$target, p = .70, list = FALSE)
+training <- datIn[ inTraining,]
+testing  <- datIn[-inTraining,]
+
+
+fitControl <- trainControl(## 3-fold CV
+                           method = "cv",
+                           number = 3)
+
+set.seed(seed)
+lm1 <- train(target ~ feature1 + feature2 + feature3, data = datIn, 
+                 method = "lm", 
+                 trControl = fitControl)
+summary(lm1)
+```
+
+```{r} 
+lm1$results$Rsquared
+
+predictions <- predict(lm1, testing)
+
+cor(testing$target, predictions)^2
+```
+
+The results are good, we can predict with the test dataframe.
+
+```{r} 
+pred <- predict(lm1, datTe)
+write.csv(pred, "D:/Kaggle/mlBasics/R-MLBasics/results.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
